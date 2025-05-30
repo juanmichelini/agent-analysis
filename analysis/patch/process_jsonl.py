@@ -32,6 +32,7 @@ def process_jsonl_file(input_path: str, verbose: bool = False) -> None:
     processed_lines = 0
     lines_with_patches = 0
     lines_with_test_patches = 0
+    empty_test_patches = 0
     
     # Process the file
     with open(input_path, 'r', encoding='utf-8') as f_in, \
@@ -60,6 +61,7 @@ def process_jsonl_file(input_path: str, verbose: bool = False) -> None:
                             if verbose:
                                 print(f"Line {line_num}: Found test patch of length {len(test_patch)}")
                         else:
+                            empty_test_patches += 1
                             if verbose:
                                 print(f"Line {line_num}: No test patch found in git_patch")
                         
@@ -84,6 +86,14 @@ def process_jsonl_file(input_path: str, verbose: bool = False) -> None:
     print(f"Valid JSON lines: {processed_lines}")
     print(f"Lines with git_patch: {lines_with_patches}")
     print(f"Lines with test patches: {lines_with_test_patches}")
+    print(f"Lines with empty test patches: {empty_test_patches}")
+    
+    # Calculate percentages if there are patches
+    if lines_with_patches > 0:
+        test_patch_percentage = (lines_with_test_patches / lines_with_patches) * 100
+        empty_patch_percentage = (empty_test_patches / lines_with_patches) * 100
+        print(f"Percentage of patches with tests: {test_patch_percentage:.2f}%")
+        print(f"Percentage of patches without tests: {empty_patch_percentage:.2f}%")
 
 
 def main():
