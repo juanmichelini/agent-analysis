@@ -7,6 +7,7 @@ import json
 import os
 import sys
 import toml
+import glob
 import datetime
 import litellm
 from typing import Dict, List, Any
@@ -83,26 +84,31 @@ def create_exp_directory(exp_name: str) -> str:
     os.makedirs(exp_dir, exist_ok=True)
     return exp_dir
 
-def call_llm(model: str, prompt: str, timeout: int = 60, max_retries: int = 2) -> str:
-    """Call the LLM with the given prompt with retry logic."""
+def call_llm(model: str, prompt: str, timeout: int = 30, max_retries: int = 3) -> str:
+    """Call the LLM with the given prompt with improved retry logic and timeout handling."""
+    current_timeout = timeout
     for attempt in range(max_retries + 1):
         try:
-            print(f"Calling LLM with timeout {timeout} seconds... (Attempt {attempt + 1}/{max_retries + 1})")
+            print(f"Calling LLM with timeout {current_timeout} seconds... (Attempt {attempt + 1}/{max_retries + 1})")
             response = litellm.completion(
                 model=model,
                 messages=[{"role": "user", "content": prompt}],
                 api_base=os.environ.get("LITELLM_PROXY_URL"),
                 api_key=os.environ.get("LITELLM_API_KEY"),
-                timeout=timeout
+                timeout=current_timeout,
+                max_tokens=1024,  # Limit response size to avoid timeouts
+                temperature=0.2   # Lower temperature for more deterministic responses
             )
             print("LLM call successful!")
             return response.choices[0].message.content
         except Exception as e:
             print(f"Error calling LLM (Attempt {attempt + 1}/{max_retries + 1}): {e}")
             if attempt < max_retries:
-                print(f"Retrying in 2 seconds...")
+                print(f"Retrying in 3 seconds...")
                 import time
-                time.sleep(2)
+                time.sleep(3)
+                # Reduce the timeout slightly for subsequent attempts
+                current_timeout = max(15, current_timeout - 5)
             else:
                 return f"Error: {str(e)}"
 
@@ -185,10 +191,34 @@ def main():
     with open(os.path.join(exp_dir, "prompt0.txt"), 'w') as f:
         f.write(initial_prompt)
     
-    # Process dataset
-    results = []
-    count = 0
+    # Check if we need to resume from a previous run
+    resume_from = 0
+    progress_files = sorted(glob.glob(os.path.join(exp_dir, "progress_*.json")))
+    if progress_files:
+        last_progress_file = progress_files[-1]
+        resume_from = int(os.path.basename(last_progress_file).split("_")[1].split(".")[0]) + 1
+        print(f"Resuming from item {resume_from}")
+        
+        # Load previous results
+        results = []
+        for i in range(resume_from):
+            progress_file = os.path.join(exp_dir, f"progress_{i}.json")
+            if os.path.exists(progress_file):
+                with open(progress_file, 'r') as f:
+                    results.append(json.load(f))
+    else:
+        results = []
+    
+    count = resume_from
     max_items = float('inf')  # Process all items in the dataset
+    
+    # Create a set of already processed instance IDs
+    processed_ids = set()
+    for i in range(resume_from):
+        progress_file = os.path.join(exp_dir, f"progress_{i}.json")
+        if os.path.exists(progress_file):
+            with open(progress_file, 'r') as f:
+                processed_ids.add(json.load(f).get("instance_id", ""))
     
     for item in dataset:
         if count >= max_items:
@@ -196,6 +226,11 @@ def main():
             
         instance_id = item.get("instance_id", "")
         
+        # Skip if already processed
+        if instance_id in processed_ids:
+            print(f"Skipping already processed item: {instance_id}")
+            continue
+            
         # Skip if not in selected_ids
         if selected_ids and instance_id not in selected_ids:
             continue
