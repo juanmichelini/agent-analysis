@@ -4,6 +4,4 @@
 **/__pycache__
 **/.DS_Store
 data
-prompt/evaluation/
 prompt/config.toml
-prompt/test/
