@@ -123,8 +123,8 @@ Make minimal general changes. The prompt will be run in many different repositor
 
 IMPROVED PROMPT:
 """
-    # Use a shorter timeout (60 seconds) for this task to avoid hanging
-    return call_llm(model, prompt, timeout=60)
+    # Use a shorter timeout (30 seconds) for this task to avoid hanging
+    return call_llm(model, prompt, timeout=30)
 
 def generate_composite_prompt(model: str, initial_prompt: str, improved_prompts: List[Dict[str, str]]) -> str:
     """Generate a composite prompt that works well for all cases."""
@@ -154,8 +154,8 @@ Only give the composite prompt, do not give
 COMPOSITE PROMPT:
 """
     
-    # Use a shorter timeout (90 seconds) for this task to avoid hanging
-    return call_llm(model, prompt, timeout=90)
+    # Use a shorter timeout (45 seconds) for this task to avoid hanging
+    return call_llm(model, prompt, timeout=45)
 
 def main():
     args = setup_args()
@@ -182,7 +182,7 @@ def main():
     # Process dataset
     results = []
     count = 0
-    max_items = 5  # Process 5 items for a more comprehensive analysis
+    max_items = 3  # Process 3 items for a balance between comprehensiveness and runtime
     
     for item in dataset:
         if count >= max_items:
@@ -201,8 +201,8 @@ def main():
         
         # Call LLM with initial prompt
         full_prompt = f"{initial_prompt}\n\n{input_text}"
-        print("Calling LLM with timeout 60 seconds...")
-        actual_output = call_llm(model, full_prompt, timeout=60)
+        print("Calling LLM with timeout 30 seconds...")
+        actual_output = call_llm(model, full_prompt, timeout=30)
         
         # Save intermediate result
         with open(os.path.join(exp_dir, f"output_{count}.txt"), 'w') as f:
