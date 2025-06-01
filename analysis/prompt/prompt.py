@@ -19,6 +19,7 @@ def setup_args() -> argparse.Namespace:
     parser.add_argument("--dataset", required=True, help="Path to a jsonl file with test data")
     parser.add_argument("--resume", action="store_true", help="Resume from existing experiment")
     parser.add_argument("--max_items", type=int, default=float('inf'), help="Maximum number of items to process")
+    parser.add_argument("--start_index", type=int, default=0, help="Index of the first item to process (0-based)")
     return parser.parse_args()
 
 def read_config() -> Dict[str, Any]:
@@ -193,10 +194,11 @@ def main():
     with open(os.path.join(exp_dir, "prompt0.txt"), 'w') as f:
         f.write(initial_prompt)
     
-    # Check if we need to resume from a previous run
-    resume_from = 0
+    # Check if we need to resume from a previous run or start from a specific index
+    resume_from = args.start_index
     progress_files = sorted(glob.glob(os.path.join(exp_dir, "progress_*.json")))
-    if progress_files:
+    
+    if args.resume and progress_files:
         last_progress_file = progress_files[-1]
         resume_from = int(os.path.basename(last_progress_file).split("_")[1].split(".")[0]) + 1
         print(f"Resuming from item {resume_from}")
@@ -209,6 +211,8 @@ def main():
                 with open(progress_file, 'r') as f:
                     results.append(json.load(f))
     else:
+        if resume_from > 0:
+            print(f"Starting from item {resume_from}")
         results = []
     
     count = resume_from
@@ -222,9 +226,14 @@ def main():
             with open(progress_file, 'r') as f:
                 processed_ids.add(json.load(f).get("instance_id", ""))
     
-    for item in dataset:
+    # Skip to the start_index
+    for idx, item in enumerate(dataset):
         if count >= max_items:
             break
+            
+        # Skip items before start_index
+        if idx < resume_from:
+            continue
             
         instance_id = item.get("instance_id", "")
         
