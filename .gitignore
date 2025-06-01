@@ -6,4 +6,5 @@
 data
 analysis/prompt/config.toml
 analysis/prompt/evaluation
-analysis/prompt/test
+analysis/prompt/test/*.jsonl
+analysis/prompt/test/initial_prompt.txt
