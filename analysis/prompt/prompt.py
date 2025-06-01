@@ -18,6 +18,7 @@ def setup_args() -> argparse.Namespace:
     parser.add_argument("--initial_prompt", required=True, help="Path to a txt file containing the initial prompt")
     parser.add_argument("--dataset", required=True, help="Path to a jsonl file with test data")
     parser.add_argument("--resume", action="store_true", help="Resume from existing experiment")
+    parser.add_argument("--max_items", type=int, default=float('inf'), help="Maximum number of items to process")
     return parser.parse_args()
 
 def read_config() -> Dict[str, Any]:
