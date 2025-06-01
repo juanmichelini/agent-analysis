@@ -83,22 +83,28 @@ def create_exp_directory(exp_name: str) -> str:
     os.makedirs(exp_dir, exist_ok=True)
     return exp_dir
 
-def call_llm(model: str, prompt: str, timeout: int = 60) -> str:
-    """Call the LLM with the given prompt."""
-    try:
-        print(f"Calling LLM with timeout {timeout} seconds...")
-        response = litellm.completion(
-            model=model,
-            messages=[{"role": "user", "content": prompt}],
-            api_base=os.environ.get("LITELLM_PROXY_URL"),
-            api_key=os.environ.get("LITELLM_API_KEY"),
-            timeout=timeout
-        )
-        print("LLM call successful!")
-        return response.choices[0].message.content
-    except Exception as e:
-        print(f"Error calling LLM: {e}")
-        return f"Error: {str(e)}"
+def call_llm(model: str, prompt: str, timeout: int = 60, max_retries: int = 2) -> str:
+    """Call the LLM with the given prompt with retry logic."""
+    for attempt in range(max_retries + 1):
+        try:
+            print(f"Calling LLM with timeout {timeout} seconds... (Attempt {attempt + 1}/{max_retries + 1})")
+            response = litellm.completion(
+                model=model,
+                messages=[{"role": "user", "content": prompt}],
+                api_base=os.environ.get("LITELLM_PROXY_URL"),
+                api_key=os.environ.get("LITELLM_API_KEY"),
+                timeout=timeout
+            )
+            print("LLM call successful!")
+            return response.choices[0].message.content
+        except Exception as e:
+            print(f"Error calling LLM (Attempt {attempt + 1}/{max_retries + 1}): {e}")
+            if attempt < max_retries:
+                print(f"Retrying in 2 seconds...")
+                import time
+                time.sleep(2)
+            else:
+                return f"Error: {str(e)}"
 
 def generate_improved_prompt(model: str, initial_prompt: str, input_text: str, 
                             expected_output: str, actual_output: str) -> str:
@@ -182,7 +188,7 @@ def main():
     # Process dataset
     results = []
     count = 0
-    max_items = 3  # Process 3 items for a balance between comprehensiveness and runtime
+    max_items = 1  # Process just 1 item for now due to LLM timeout issues
     
     for item in dataset:
         if count >= max_items:
