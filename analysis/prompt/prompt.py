@@ -220,6 +220,10 @@ def main():
             model, initial_prompt, input_text, expected_output, actual_output
         )
         
+        # Save improved prompt
+        with open(os.path.join(exp_dir, f"prompt_{count+1}.txt"), 'w') as f:
+            f.write(new_prompt)
+        
         # Save result
         result = {
             "instance_id": instance_id,
@@ -229,6 +233,11 @@ def main():
             "new_prompt": new_prompt
         }
         results.append(result)
+        
+        # Save progress after each item
+        with open(os.path.join(exp_dir, f"progress_{count}.json"), 'w') as f:
+            json.dump(result, f, indent=2)
+            
         count += 1
     
     # Save results
