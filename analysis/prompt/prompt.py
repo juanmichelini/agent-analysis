@@ -211,7 +211,7 @@ def main():
         results = []
     
     count = resume_from
-    max_items = float('inf')  # Process all items in the dataset
+    max_items = args.max_items  # Use the max_items from command line arguments
     
     # Create a set of already processed instance IDs
     processed_ids = set()
