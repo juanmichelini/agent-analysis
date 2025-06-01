@@ -62,7 +62,7 @@ def setup_llm(llm_config: Dict[str, Any]) -> None:
     config = llm_config[llm_name]
     
     # Set up litellm
-    litellm.api_key = config.get("api_key")
+    os.environ["LITELLM_API_KEY"] = config.get("api_key")
     if config.get("base_url"):
         os.environ["LITELLM_PROXY_URL"] = config.get("base_url")
 
@@ -83,13 +83,18 @@ def create_exp_directory(exp_name: str) -> str:
     os.makedirs(exp_dir, exist_ok=True)
     return exp_dir
 
-def call_llm(model: str, prompt: str) -> str:
+def call_llm(model: str, prompt: str, timeout: int = 60) -> str:
     """Call the LLM with the given prompt."""
     try:
+        print(f"Calling LLM with timeout {timeout} seconds...")
         response = litellm.completion(
             model=model,
-            messages=[{"role": "user", "content": prompt}]
+            messages=[{"role": "user", "content": prompt}],
+            api_base=os.environ.get("LITELLM_PROXY_URL"),
+            api_key=os.environ.get("LITELLM_API_KEY"),
+            timeout=timeout
         )
+        print("LLM call successful!")
         return response.choices[0].message.content
     except Exception as e:
         print(f"Error calling LLM: {e}")
@@ -117,7 +122,8 @@ Based on the difference between the expected and actual outputs, please suggest 
 
 IMPROVED PROMPT:
 """
-    return call_llm(model, prompt)
+    # Use a longer timeout (120 seconds) for this more complex task
+    return call_llm(model, prompt, timeout=120)
 
 def generate_composite_prompt(model: str, initial_prompt: str, improved_prompts: List[Dict[str, str]]) -> str:
     """Generate a composite prompt that works well for all cases."""
@@ -145,7 +151,8 @@ Based on the initial prompt and the improved prompts for specific cases, please 
 COMPOSITE PROMPT:
 """
     
-    return call_llm(model, prompt)
+    # Use a longer timeout (180 seconds) for this more complex task
+    return call_llm(model, prompt, timeout=180)
 
 def main():
     args = setup_args()
@@ -169,9 +176,15 @@ def main():
     with open(os.path.join(exp_dir, "prompt0.txt"), 'w') as f:
         f.write(initial_prompt)
     
-    # Process dataset
+    # Process dataset - limit to just 1 item for testing
     results = []
+    count = 0
+    max_items = 1  # Process only 1 item for testing
+    
     for item in dataset:
+        if count >= max_items:
+            break
+            
         instance_id = item.get("instance_id", "")
         
         # Skip if not in selected_ids
@@ -181,11 +194,18 @@ def main():
         input_text = item.get("input", "")
         expected_output = item.get("expected_output", "")
         
+        print(f"Processing item {count+1}/{max_items}: {instance_id}")
+        
         # Call LLM with initial prompt
         full_prompt = f"{initial_prompt}\n\n{input_text}"
         actual_output = call_llm(model, full_prompt)
         
+        # Save intermediate result
+        with open(os.path.join(exp_dir, f"output_{count}.txt"), 'w') as f:
+            f.write(actual_output)
+        
         # Generate improved prompt
+        print(f"Generating improved prompt for {instance_id}")
         new_prompt = generate_improved_prompt(
             model, initial_prompt, input_text, expected_output, actual_output
         )
@@ -199,6 +219,7 @@ def main():
             "new_prompt": new_prompt
         }
         results.append(result)
+        count += 1
     
     # Save results
     run_path = os.path.join(exp_dir, "run0.jsonl")
@@ -206,12 +227,14 @@ def main():
         for result in results:
             f.write(json.dumps(result) + '\n')
     
-    # Generate composite prompt
-    composite_prompt = generate_composite_prompt(model, initial_prompt, results)
-    
-    # Save composite prompt
-    with open(os.path.join(exp_dir, "prompt1.txt"), 'w') as f:
-        f.write(composite_prompt)
+    # Generate composite prompt if we have results
+    if results:
+        print("Generating composite prompt")
+        composite_prompt = generate_composite_prompt(model, initial_prompt, results)
+        
+        # Save composite prompt
+        with open(os.path.join(exp_dir, "prompt1.txt"), 'w') as f:
+            f.write(composite_prompt)
     
     print(f"Experiment completed. Results saved to {exp_dir}")
 
