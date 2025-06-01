@@ -226,9 +226,9 @@ def main():
             with open(progress_file, 'r') as f:
                 processed_ids.add(json.load(f).get("instance_id", ""))
     
-    # Skip to the start_index
+    # Process items starting from start_index
     for idx, item in enumerate(dataset):
-        if count >= max_items:
+        if count >= resume_from + max_items:
             break
             
         # Skip items before start_index
@@ -249,7 +249,7 @@ def main():
         input_text = item.get("input", "")
         expected_output = item.get("expected_output", "")
         
-        print(f"Processing item {count+1}/{max_items}: {instance_id}")
+        print(f"Processing item {count+1-resume_from}/{max_items} (index {count}): {instance_id}")
         
         # Call LLM with initial prompt
         full_prompt = f"{initial_prompt}\n\n{input_text}"
