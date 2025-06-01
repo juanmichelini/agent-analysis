@@ -251,13 +251,42 @@ def main():
         
         # Generate improved prompt
         print(f"Generating improved prompt for {instance_id}")
-        new_prompt = generate_improved_prompt(
+        new_prompt_full = generate_improved_prompt(
             model, initial_prompt, input_text, expected_output, actual_output
         )
         
-        # Save improved prompt
+        # Extract only the improved prompt without LLM comments
+        # Look for the IMPROVED PROMPT: marker and extract content until --- or end of text
+        improved_prompt_only = ""
+        if "**IMPROVED PROMPT:**" in new_prompt_full:
+            # Extract content between **IMPROVED PROMPT:** and --- or end of text
+            start_marker = "**IMPROVED PROMPT:**"
+            end_markers = ["---", "The key improvement"]
+            
+            start_idx = new_prompt_full.find(start_marker) + len(start_marker)
+            end_idx = float('inf')
+            
+            for marker in end_markers:
+                marker_idx = new_prompt_full.find(marker, start_idx)
+                if marker_idx != -1 and marker_idx < end_idx:
+                    end_idx = marker_idx
+            
+            if end_idx == float('inf'):
+                # No end marker found, use the rest of the text
+                improved_prompt_only = new_prompt_full[start_idx:].strip()
+            else:
+                improved_prompt_only = new_prompt_full[start_idx:end_idx].strip()
+        else:
+            # Fallback if the expected format is not found
+            improved_prompt_only = new_prompt_full
+        
+        # Save improved prompt (clean version)
         with open(os.path.join(exp_dir, f"prompt_{count+1}.txt"), 'w') as f:
-            f.write(new_prompt)
+            f.write(improved_prompt_only)
+            
+        # Save full response for debugging
+        with open(os.path.join(exp_dir, f"prompt_{count+1}_full.txt"), 'w') as f:
+            f.write(new_prompt_full)
         
         # Save result
         result = {
@@ -265,7 +294,8 @@ def main():
             "input": input_text,
             "expected_output": expected_output,
             "actual_output": actual_output,
-            "new_prompt": new_prompt
+            "new_prompt": improved_prompt_only,
+            "new_prompt_full": new_prompt_full
         }
         results.append(result)
         
