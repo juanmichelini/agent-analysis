@@ -118,7 +118,8 @@ EXPECTED OUTPUT:
 ACTUAL OUTPUT:
 {actual_output}
 
-Based on the difference between the expected and actual outputs, please suggest an improved version of the initial prompt that would help the model produce output closer to the expected output. Focus on making the prompt more specific, clearer, and better structured.
+Based on the difference between the expected and actual outputs, please suggest an improved version of the initial prompt.
+Make minimal general changes. The prompt will be run in many different repositories, so don't mention anything too specific.
 
 IMPROVED PROMPT:
 """
@@ -147,7 +148,9 @@ IMPROVED PROMPT: {item['new_prompt']}
     
     prompt += """
 Based on the initial prompt and the improved prompts for specific cases, please create a new composite prompt that would work well for all these cases and similar ones. The composite prompt should be general enough to handle various inputs but specific enough to produce outputs similar to the expected ones.
+Make minimal changes to the intial prompt to consider the improvements of the new prompts.
 
+Only give the composite prompt, do not give 
 COMPOSITE PROMPT:
 """
     
@@ -176,10 +179,10 @@ def main():
     with open(os.path.join(exp_dir, "prompt0.txt"), 'w') as f:
         f.write(initial_prompt)
     
-    # Process dataset - limit to just 1 item for testing
+    # Process dataset
     results = []
     count = 0
-    max_items = 1  # Process only 1 item for testing
+    max_items = 5  # Process 5 items for a more comprehensive analysis
     
     for item in dataset:
         if count >= max_items:
