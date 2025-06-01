@@ -134,7 +134,7 @@ ACTUAL OUTPUT:
 {actual_output}
 
 Based on the difference between the expected and actual outputs, please suggest an improved version of the initial prompt.
-Make minimal general changes. The prompt will be run in many different repositories, so don't mention anything too specific.
+Make minimal general changes. Keep close to the inital prompt. The prompt will be run in many different repositories, so don't mention anything too specific.
 
 IMPROVED PROMPT:
 """
