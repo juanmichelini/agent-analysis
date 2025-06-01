@@ -17,6 +17,7 @@ def setup_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Prompt evaluation tool")
     parser.add_argument("--initial_prompt", required=True, help="Path to a txt file containing the initial prompt")
     parser.add_argument("--dataset", required=True, help="Path to a jsonl file with test data")
+    parser.add_argument("--resume", action="store_true", help="Resume from existing experiment")
     return parser.parse_args()
 
 def read_config() -> Dict[str, Any]:
@@ -74,11 +75,11 @@ def get_exp_name() -> str:
         exp_name = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
     return exp_name
 
-def create_exp_directory(exp_name: str) -> str:
+def create_exp_directory(exp_name: str, resume: bool = False) -> str:
     """Create the experiment directory."""
     exp_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "evaluation", exp_name)
-    if os.path.exists(exp_dir):
-        print(f"Error: Experiment directory {exp_dir} already exists")
+    if os.path.exists(exp_dir) and not resume:
+        print(f"Error: Experiment directory {exp_dir} already exists. Use --resume to continue.")
         sys.exit(1)
     
     os.makedirs(exp_dir, exist_ok=True)
@@ -185,7 +186,7 @@ def main():
     
     # Set up experiment
     exp_name = get_exp_name()
-    exp_dir = create_exp_directory(exp_name)
+    exp_dir = create_exp_directory(exp_name, args.resume)
     
     # Save initial prompt
     with open(os.path.join(exp_dir, "prompt0.txt"), 'w') as f:
