@@ -188,7 +188,7 @@ def main():
     # Process dataset
     results = []
     count = 0
-    max_items = 1  # Process just 1 item for now due to LLM timeout issues
+    max_items = float('inf')  # Process all items in the dataset
     
     for item in dataset:
         if count >= max_items:
